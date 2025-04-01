@@ -28,10 +28,11 @@ The core diffusion model implementation is based on the paper:
 
 ## Installation and Setup
 
-Clone the repository and create the environment:
+To use the code for diffusion model and reproduce results, you first need to create the environment and install all the dependencies by running the following commands:
 
 ```bash
 # Create conda environment
+cd pdediff
 conda env create -f environment.yml
 
 # Activate the environment
