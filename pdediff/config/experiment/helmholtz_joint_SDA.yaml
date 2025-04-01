@@ -1,0 +1,56 @@
+# @package _global_
+
+name: helmholtz_joint_SDA
+
+defaults:
+  - /data: helmholtz
+  - /net: unet
+  - /score: unet_forcing
+  - /sampler: dpm
+  - /eval_data: helmholtz
+  
+window: 3
+amortized: false
+
+net:
+  hidden_channels: [128, 128, 256, 1024] # [96, 192, 384]
+  hidden_blocks: [3, 3, 3, 3] # [3, 3, 3]
+  kernel_size: 3
+  activation: 'SiLU'
+  padding_mode: 'circular'
+
+optim:
+  lr: 2e-4
+  weight_decay: 1e-3
+
+eval:
+  load_model_name: "score_ema.pth"
+  init_noise: True
+  guidance:
+    type: "SDA"
+    gamma: 0.1
+    gamma1: ${eval.guidance.gamma}
+    std: 0.01
+  sampling:
+    steps: 128
+    corrections: 0
+    tau: 1 #0.5 #0.1
+  rollout_type: "autoregressive"
+  conditioning: True
+  task: "forecast"
+  forecast:
+    trajectory_length: 3
+    conditioned_frame: ${eval:'${window} - ${eval.forecast.predictive_horizon}'}
+    predictive_horizon: 1
+    n_samples: 1500
+    batch_samples: 1
+    test_batch_size: 1
+
+
+# training:
+epochs: 100
+batch_size: 1
+scheduler_name: 'linear'
+log_loss_per_level: True
+model_type: "noise"
+ema_decay: 0.995

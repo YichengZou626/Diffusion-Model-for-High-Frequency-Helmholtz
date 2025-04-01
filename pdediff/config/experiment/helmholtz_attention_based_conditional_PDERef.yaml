@@ -1,0 +1,53 @@
+# @package _global_
+
+name: helmholtz_attention_based_conditional_PDERef
+
+defaults:
+  - /data: helmholtz
+  - /net: twod_unet
+  - /score: unet_forcing_amortized
+  - /eval_data: helmholtz
+  - /sampler: dpm
+
+window: 3
+predictive_horizon: 1
+amortized: true
+fixed_horizon: true
+noise_std: 0.00
+noise_std_da: 0.0 #0.01
+
+optim:
+  lr: 1e-4
+  weight_decay: 1e-5
+
+eval:
+  load_model_name: "score_ema.pth"
+  guidance:
+    gamma: 0.1
+    std: 0.01
+    std_init: 0.0
+    std_da: 0.0 #0.01
+    type: "SDA"
+  sampling:
+    steps: 128 #256
+    # steps: 512
+    corrections: 0
+    tau: 1. #0.1
+  forecast:
+    conditioned_frame: ${eval:'${window} - ${eval.forecast.predictive_horizon}'}
+    predictive_horizon: ${predictive_horizon}
+    trajectory_length: 3
+    n_samples: 1500
+    test_batch_size: 1
+  task: "forecast"
+
+
+
+# training:
+epochs: 40
+batch_size: 1
+scheduler_name: 'cosine'
+model_type: "noise"
+ema_decay: 0.995
+log_loss_per_level: False
+log_loss_per_cond_frame: False
