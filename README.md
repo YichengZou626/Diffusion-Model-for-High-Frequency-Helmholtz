@@ -30,7 +30,7 @@ The core diffusion model implementation is based on the paper:
 
 To use the code for diffusion model and reproduce results, you first need to create the environment and install all the dependencies by running the following commands:
 
-```bash
+```
 # Create conda environment
 cd pdediff
 conda env create -f environment.yml
@@ -68,7 +68,45 @@ If you want to sample from the trained joint model
 python main.py -m seed=0 mode=eval experiment=helmholtz_joint_SDA window={window_size}
 ```
 
+### Running Baseline Models
 We also compare our diffusion model to other methods:
 - **UNet**: with the same structure as our conditional diffusion model (SDA-based)
 - **FNO (Fourier Neural Operator)**: [GitHub - neuraloperator/neuraloperator](https://github.com/neuraloperator/neuraloperator)
 - **HNO (Helmholtz Neural Operator)**: [GitHub - caifeng-zou/ANFWI_HNO](https://github.com/caifeng-zou/ANFWI_HNO)
+
+To replicate our experiments with the FNO and HNO models:
+
+FNO (Fourier Neural Operator)
+Navigate to the script/ subfolder:
+```
+cd FNO/script
+```
+Run the training script:
+```
+python train_helmholtz.py
+```
+
+HNO (Helmholtz Neural Operator)
+Navigate to the code/ subfolder:
+```
+cd HNO/code
+```
+Run the main script:
+```
+python run.py
+```
+
+### Notes
+The datasets are too large to be included in this repository. To generate your own, please refer to data_generation.py.
+
+Our goal is to assess the ability of diffusion models to simulate high-frequency Helmholtz fields, where deterministic models often fail due to frequency aliasing and lack of generalization.
+
+## Contact
+If you have any questions or suggestions, feel free to open an issue or reach out!
+
+
+
+
+
+
+
