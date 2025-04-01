@@ -1,1 +1,73 @@
 # Diffusion-Model-for-High-Frequency-Helmholtz
+
+This project explores the use of conditional diffusion models to simulate high-frequency solutions to the Helmholtz equation. It focuses on learning wave propagation behavior at various frequencies using synthetic data generated via the [JWave tutorial](https://github.com/jwave-sim/jwave).
+
+---
+
+## Dataset
+
+We simulate Helmholtz wavefields at the following frequencies:
+
+- 1.5e5 Hz  
+- 2.5e5 Hz  
+- 5e5 Hz  
+- 1.5e6 Hz  
+- 2.5e6 Hz  
+- 5e6 Hz  
+
+Data generation is implemented in `data_generation.py` is adapted from the JWave framework: https://ucl-bug.github.io/jwave/notebooks/harmonic/helmholtz_problem.html.
+
+---
+
+## Acknowledgement
+
+The core diffusion model implementation is based on the paper:  
+**"On conditional diffusion models for PDE simulations"**
+
+---
+
+## Installation and Setup
+
+Clone the repository and create the environment:
+
+```bash
+# Create conda environment
+conda env create -f environment.yml
+
+# Activate the environment
+conda activate pdediff
+
+# Install package in editable mode
+pip install -e .
+```
+
+## Experiments
+
+We used `hydra` to manage config files and hyperparameters. All the experiment configs and hyperparameters used to train the model can be found inside the `config` folder. 
+
+The experiment configs have the following structure `{dataset}_{model_type}_{architecture}`. 
+- The considered datasets are `helmholtz`.
+- The model_type can be `joint`, `conditional`, or `attention_based_conditional`.
+- The architecture can be `SDA` or `PDERef`
+
+Cite for [Score-based Data Assimilation repo](https://github.com/francois-rozet/sda) and [PDERefiner repo](https://github.com/pdearena/pdearena). 
+
+### Training a joint model on helmholtz dataset
+If you want to train a model with the SDA architecture with an order $k$ assumption, i.e. pseudo Markov Blanket of size $2k+1$ you can run the following command
+
+```
+python main.py -m seed=0 mode=train experiment=helmholtz_joint_SDA window={window_size}
+```
+where `window_size=2k+1`.
+
+### Conditional sampling on helmholtz dataset
+If you want to sample from the trained joint model
+
+```
+python main.py -m seed=0 mode=eval experiment=helmholtz_joint_SDA window={window_size}
+```
+
+We also compare our diffusion model to other methods:
+- **UNet**: with the same structure as our conditional diffusion model (SDA-based)
+- **FNO (Fourier Neural Operator)**: [GitHub - neuraloperator/neuraloperator](https://github.com/neuraloperator/neuraloperator)
+- **HNO (Helmholtz Neural Operator)**: [GitHub - caifeng-zou/ANFWI_HNO](https://github.com/caifeng-zou/ANFWI_HNO)
