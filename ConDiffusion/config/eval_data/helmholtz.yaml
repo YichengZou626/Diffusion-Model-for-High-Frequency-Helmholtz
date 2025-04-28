@@ -1,0 +1,5 @@
+name: helmholtz
+path: ${data_dir}/helmholtz
+spatial: 2
+grid_size: [256,256]
+state_shape: [2,256,256]
