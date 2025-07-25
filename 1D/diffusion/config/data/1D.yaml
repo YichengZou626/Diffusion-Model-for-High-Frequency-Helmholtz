@@ -1,0 +1,5 @@
+name: 1D
+path: ${data_dir}/1D
+spatial: 1
+grid_size: 256
+state_shape: 256

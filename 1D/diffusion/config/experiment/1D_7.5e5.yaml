@@ -1,0 +1,41 @@
+# @package _global_
+
+name: 1D_7.5e5
+
+defaults:
+  - /data: 1D
+  - /eval_data: 1D
+
+window: 1
+predictive_horizon: 1
+amortized: true
+fixed_horizon: true
+noise_std: 0.00
+
+score:
+  _target_: utils.score.ConditionedScoreUNet
+  size: 256
+  add_noise: True
+  embedding: 64
+
+net:
+  _target_: utils.unet.UNet
+  hidden_channels: [48,96,192,384,768]
+  hidden_blocks: [3, 3, 3, 3, 3]
+  kernel_size: 3
+  activation: 'SiLU'
+  spatial: ${data.spatial}
+  padding_mode: 'circular'
+  embedding: 64
+
+optim:
+  lr: 2e-4
+  weight_decay: 1e-5
+
+# training:
+epochs: 1000
+batch_size: 32
+scheduler_name: 'cosine'
+model_type: "noise"
+ema_decay: 0.995
+log_loss_per_level: True
