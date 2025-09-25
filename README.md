@@ -62,10 +62,10 @@ python main.py -m seed=0 mode=train experiment=helmholtz_joint_SDA window={windo
 where `window_size=2k+1`.
 
 ### Conditional sampling on helmholtz dataset
-If you want to sample from the trained joint model
+If you want to sample from the trained model
 
 ```
-python main.py -m seed=0 mode=eval experiment=helmholtz_joint_SDA window={window_size}
+python main.py -m seed=0 mode=eval experiment=helmholtz_helmholtz_1.5e6 window=3
 ```
 
 ### Running Baseline Models
