@@ -57,7 +57,7 @@ Cite for [Score-based Data Assimilation repo](https://github.com/francois-rozet/
 If you want to train a model with the SDA architecture with an order $k$ assumption, i.e. pseudo Markov Blanket of size $2k+1$ you can run the following command
 
 ```
-python main.py -m seed=0 mode=train experiment=helmholtz_joint_SDA window={window_size}
+python main.py -m seed=0 mode=train experiment=helmholtz_1.5e6 window=3
 ```
 where `window_size=2k+1`.
 
