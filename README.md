@@ -46,15 +46,10 @@ pip install -e .
 
 We used `hydra` to manage config files and hyperparameters. All the experiment configs and hyperparameters used to train the model can be found inside the `config` folder. 
 
-The experiment configs have the following structure `{dataset}_{model_type}_{architecture}`. 
-- The considered datasets are `helmholtz`.
-- The model_type can be `joint`, `conditional`, or `attention_based_conditional`.
-- The architecture can be `SDA` or `PDERef`
-
 Cite for [Score-based Data Assimilation repo](https://github.com/francois-rozet/sda) and [PDERefiner repo](https://github.com/pdearena/pdearena). 
 
 ### Training a joint model on helmholtz dataset
-If you want to train a model with the SDA architecture with an order $k$ assumption, i.e. pseudo Markov Blanket of size $2k+1$ you can run the following command
+If you want to train a model, you can run the following command
 
 ```
 python main.py -m seed=0 mode=train experiment=helmholtz_1.5e6 window=3
@@ -65,7 +60,7 @@ where `window_size=2k+1`.
 If you want to sample from the trained model
 
 ```
-python main.py -m seed=0 mode=eval experiment=helmholtz_helmholtz_1.5e6 window=3
+python main.py -m seed=0 mode=eval experiment=helmholtz_1.5e6 window=3
 ```
 
 ### Running Baseline Models
