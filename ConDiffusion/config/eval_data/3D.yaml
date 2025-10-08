@@ -1,0 +1,6 @@
+name: 3D
+path: ${data_dir}/3D
+spatial: 3
+grid_size: [64,64,64]
+state_shape: [3,64,64,64]
+
