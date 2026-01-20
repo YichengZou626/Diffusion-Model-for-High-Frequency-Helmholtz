@@ -1,0 +1,52 @@
+# @package _global_
+
+name: 2D_UViT
+
+defaults:
+  - /data: helmholtz
+  - /eval_data: helmholtz
+
+window: 2
+predictive_horizon: 1
+amortized: true
+fixed_horizon: true
+noise_std: 0.00
+
+# ---------------- Score wrapper ----------------
+score:
+  _target_: utils.score.ConditionedScoreUViT
+  add_noise: True
+  size: 64                # not used by UVit3D, keep if other parts rely on it
+
+
+# ---------------- UVit3D backbone ----------------
+# net:  (REMOVE dtype/device lines)
+net:
+  _target_: utils.UViT.UViT2D
+  spatial_resolution: [256, 256]
+  num_channels: [32, 64, 128, 256, 512]
+  downsample_ratio: [2, 2, 2, 2, 2]
+  num_blocks: 4
+  noise_embed_dim: 256
+  input_proj_channels: 256
+  output_proj_channels: 256
+  use_attention: [false, true, false, true, false]
+  use_position_encoding: true
+  num_heads: 8
+  normalize_qk: false
+  padding_method: circular
+  dropout_rate: 0.0
+
+
+
+optim:
+  lr: 2e-4
+  weight_decay: 1e-5
+
+# training:
+epochs: 1000
+batch_size: 32
+scheduler_name: 'cosine'
+model_type: "noise"
+ema_decay: 0.995
+log_loss_per_level: True
