@@ -29,6 +29,8 @@ import torch.nn.functional as F
 
 from utils.model.building_blocks.stacks.dstack_3d import DStack
 from utils.model.building_blocks.stacks.ustack_3d import UStack
+from utils.model.building_blocks.stacks.dstack import DStack as dstack
+from utils.model.building_blocks.stacks.ustack import UStack as ustack
 from utils.model.building_blocks.embeddings.fourier_emb import FourierEmbedding
 from utils.model.building_blocks.layers.convolutions import ConvLayer
 
@@ -92,7 +94,7 @@ class UViT3D(nn.Module):
         self.out_channels = out_channels
         self.num_channels = num_channels
         self.spatial_resolution = spatial_resolution
-        self.spatial = len(self.spatial_resolution)  # <-- add this line
+        self.spatial = spatial  # <-- add this line
         self.kernel_dim = len(spatial_resolution)  # 3 for (X,Y,Z)
         self.downsample_ratio = downsample_ratio
         self.num_blocks = num_blocks
@@ -218,3 +220,169 @@ class UViT3D(nn.Module):
         h = self.conv_layer(h)
         return h
 
+
+class UViT2D(nn.Module):
+    """UNet model compatible with 1 or 2 spatial dimensions.
+
+    Original UNet model transformed from a Jax based to a PyTorch
+    based version. Derived from Wan et al. (https://arxiv.org/abs/2305.15618)
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        spatial_resolution: Sequence[int],
+        time_cond: bool = False,
+        use_hr_residual: bool = False,
+        num_channels: Sequence[int] = (128, 256, 256),
+        downsample_ratio: Sequence[int] = (2, 2, 2),
+        num_blocks: int = 4,
+        noise_embed_dim: int = 128,
+        input_proj_channels: int = 128,
+        output_proj_channels: int = 128,
+        padding_method: str = "circular",
+        dropout_rate: float = 0.0,
+        use_attention: bool = True,
+        use_position_encoding: bool = True,
+        num_heads: int = 8,
+        normalize_qk: bool = False,
+        dtype: torch.dtype = torch.float32,
+        device: Optional[torch.device] = None,
+        spatial: int = 2,
+    ):
+        super().__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.spatial_resolution = spatial_resolution
+        self.spatial = spatial
+        self.time_cond = (
+            time_cond  # can be used if additional conditioning on time is required
+        )
+        self.kernel_dim = len(spatial_resolution)
+        # resize_to_shape can be utilized if the dataset resolution changes within batches
+        self.num_channels = num_channels
+        self.downsample_ratio = downsample_ratio
+        self.use_hr_residual = use_hr_residual
+        self.num_blocks = num_blocks
+        self.noise_embed_dim = noise_embed_dim
+        self.input_proj_channels = input_proj_channels
+        self.output_proj_channels = output_proj_channels
+        self.padding_method = padding_method
+        self.dropout_rate = dropout_rate
+        self.use_attention = use_attention
+        self.use_position_encoding = use_position_encoding
+        self.num_heads = num_heads
+        self.normalize_qk = normalize_qk
+        self.dtype = dtype
+        self.device = device
+
+        self.embedding = FourierEmbedding(
+            dims=self.noise_embed_dim, dtype=self.dtype, device=self.device
+        )
+
+        self.emb_channels = (
+            self.noise_embed_dim * 2 if self.time_cond else self.noise_embed_dim
+        )
+
+        self.DStack = dstack(
+            in_channels=self.in_channels,
+            spatial_resolution=self.spatial_resolution,
+            emb_channels=self.emb_channels,
+            num_channels=self.num_channels,
+            num_res_blocks=len(self.num_channels) * (self.num_blocks,),
+            downsample_ratio=self.downsample_ratio,
+            num_input_proj_channels=self.input_proj_channels,
+            padding_method=self.padding_method,
+            dropout_rate=self.dropout_rate,
+            use_attention=self.use_attention,
+            num_heads=self.num_heads,
+            use_position_encoding=self.use_position_encoding,
+            normalize_qk=self.normalize_qk,
+            dtype=self.dtype,
+            device=self.device,
+        )
+
+
+        self.UStack = ustack(
+            spatial_resolution=self.spatial_resolution,
+            emb_channels=self.emb_channels,
+            num_channels=self.num_channels[::-1],
+            num_res_blocks=len(self.num_channels) * (self.num_blocks,),
+            upsample_ratio=self.downsample_ratio[::-1],
+            padding_method=self.padding_method,
+            dropout_rate=self.dropout_rate,
+            use_attention=self.use_attention,
+            num_input_proj_channels=self.input_proj_channels,
+            num_output_proj_channels=self.output_proj_channels,
+            num_heads=self.num_heads,
+            normalize_qk=self.normalize_qk,
+            dtype=self.dtype,
+            device=self.device,
+        )
+
+        self.norm = nn.GroupNorm(
+            min(max(self.output_proj_channels // 4, 1), 32),
+            self.output_proj_channels,
+            device=self.device,
+            dtype=self.dtype,
+        )
+
+        self.conv_layer = ConvLayer(
+            in_channels=self.output_proj_channels,
+            out_channels=self.out_channels,
+            kernel_size=self.kernel_dim * (3,),
+            padding_mode=self.padding_method,
+            padding=1,
+            case=self.kernel_dim,
+            kernel_init=default_init(),
+            dtype=self.dtype,
+            device=self.device,
+        )
+
+    def forward(
+        self, x: Tensor, sigma: Tensor, time: Tensor = None, down_only: bool = False
+    ) -> Tensor:
+        """Predicts denosied given noise input and noise level.
+
+        Args:
+          x: The model input (i.e. noise sample) with shape (bs, **spatial_dims, c)
+          sigma: The noise level, which either shares the same bs dim as 'x'
+                  or is a scalar
+          down_only: If set to 'True', only returns 'skips[-1]' (used for downstream
+                      tasks) as an embedding. If set to 'False' it then does the full
+                      UNet usual computation.
+
+        Returns:
+          An output tensor with the same dimension as 'x'.
+        """
+        if sigma.dim() < 1:
+            sigma = sigma.expand(x.size(0))
+
+        if sigma.dim() != 1 or x.shape[0] != sigma.shape[0]:
+            raise ValueError(
+                "sigma must be 1D and have the same leading (batch) dim as x"
+                f" ({x.shape[0]})"
+            )
+
+        emb = self.embedding(sigma)
+
+        # Downsampling
+        skips = self.DStack(x, emb)
+
+        if down_only:
+            return skips[-1]
+
+        if self.use_hr_residual:
+            # Upsample output of the lowest level from DStack
+            # up to the input dimension and shape
+            high_res_residual, _ = self.upsample(skips[-1], emb)
+
+        # Upsampling
+        h = self.UStack(skips[-1], emb, skips)
+
+        h = F.silu(self.norm(h))
+        h = self.conv_layer(h)
+
+        return h
